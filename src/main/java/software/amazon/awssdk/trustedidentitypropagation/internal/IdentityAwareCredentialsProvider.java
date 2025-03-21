@@ -27,6 +27,7 @@ import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.core.ApiName;
 import software.amazon.awssdk.services.ssooidc.SsoOidcClient;
 import software.amazon.awssdk.services.ssooidc.model.CreateTokenWithIamRequest;
 import software.amazon.awssdk.services.ssooidc.model.CreateTokenWithIamResponse;
@@ -34,6 +35,7 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.ProvidedContext;
+import software.amazon.awssdk.trustedidentitypropagation.Helpers;
 import software.amazon.awssdk.utils.Logger;
 
 @SdkInternalApi
@@ -41,8 +43,10 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
 
     private static final Logger LOGGER = Logger.loggerFor(IdentityAwareCredentialsProvider.class);
 
-    private static final long FIFTEEN_MINUTES_IN_MS = 15L * 60L * 1000L;
     private static final int FIFTEEN_MINUTES_IN_SEC = 15 * 60;
+
+    private static final String PLUGIN_METRIC_LABEL = "aws-tip";
+    private static final String PLUGIN_METRIC_PREFIX = "p";
     private AwsCredentials identityAwareCredentials;
 
     private String applicationArn;
@@ -84,8 +88,8 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
                 .grantType(JWT_BEARER_GRANT_URI)
                 .assertion(webTokenProvider.get())
                 .clientId(applicationArn)
+                .overrideConfiguration(c -> c.addApiName(getTipApiName()))
                 .build());
-        ;
 
         String idTokenFromTti = createTokenWithIamResponse.idToken();
         JWSObject idTokenJws = JWSObject.parse(idTokenFromTti);
@@ -101,7 +105,7 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
             .roleSessionName(getIdentityEnhancedSessionName(applicationArn))
             .overrideConfiguration(
                 c -> c.credentialsProvider(ssoOidcClient.serviceClientConfiguration()
-                    .credentialsProvider()))
+                    .credentialsProvider()).addApiName(getTipApiName()))
             .providedContexts(ProvidedContext.builder()
                 .providerArn(CONTEXT_PROVIDER_IDENTITY_CENTER)
                 .contextAssertion(contextAssertion)
@@ -115,6 +119,14 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
             .build();
 
         return credentials;
+    }
+
+    private ApiName getTipApiName() {
+        ApiName apiName = ApiName.builder()
+            .name(PLUGIN_METRIC_PREFIX)
+            .version(PLUGIN_METRIC_LABEL.concat("#").concat(Helpers.getVersion()))
+            .build();
+        return apiName;
     }
 
 }

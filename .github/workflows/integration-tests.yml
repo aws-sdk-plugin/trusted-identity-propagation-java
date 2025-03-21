@@ -1,0 +1,43 @@
+name: Run integration tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        java: ['17']
+    name: Java ${{ matrix.Java }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: configure credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.ACTIONS_EXECUTION_ROLE }}
+          role-session-name: IntegrationTests
+      - name: fetch environment variables
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            INTEGRATION_TEST_VARIABLES, TestEnvironmentVariables
+            INTEGRATION_TEST_PRIVATE_KEY, IdentityProviderPrivateKey
+      - name: Run Integration Tests with Maven
+        run: mvn clean install -P integration-tests
+
