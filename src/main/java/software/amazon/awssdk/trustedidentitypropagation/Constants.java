@@ -23,9 +23,7 @@ public class Constants {
     public static final String CONTEXT_PROVIDER_IDENTITY_CENTER = "arn:aws:iam::aws:contextProvider/IdentityCenter";
 
     private Constants() {
-        throw new AssertionError("Constants utility class - cannot be instantiated");
     }
-
 
 
 }

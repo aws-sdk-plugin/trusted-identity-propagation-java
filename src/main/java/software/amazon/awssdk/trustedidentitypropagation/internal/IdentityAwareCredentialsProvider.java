@@ -19,9 +19,7 @@ import static software.amazon.awssdk.trustedidentitypropagation.Constants.CONTEX
 import static software.amazon.awssdk.trustedidentitypropagation.Constants.JWT_BEARER_GRANT_URI;
 import static software.amazon.awssdk.trustedidentitypropagation.Helpers.getIdentityEnhancedSessionName;
 
-import com.nimbusds.jose.JWSObject;
 import java.text.ParseException;
-import java.util.Map;
 import java.util.function.Supplier;
 import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -91,14 +89,7 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
                 .overrideConfiguration(c -> c.addApiName(getTipApiName()))
                 .build());
 
-        String idTokenFromTti = createTokenWithIamResponse.idToken();
-        JWSObject idTokenJws = JWSObject.parse(idTokenFromTti);
-
-        // TODO: To be removed. We are going to get `sts:identity_context` from the response of `CreateTokenWithIAM`.
-        Map<String, Object> idTokenObject = idTokenJws.getPayload().toJSONObject();
-
-        String contextAssertion = (String) idTokenObject.get("sts:identity_context");
-        String sub = (String) idTokenObject.get("sub");
+        String contextAssertion = createTokenWithIamResponse.awsAdditionalDetails().identityContext();
         AssumeRoleResponse assumeRoleResponse = stsClient.assumeRole(AssumeRoleRequest.builder()
             .roleArn(accessRoleArn)
             .durationSeconds(FIFTEEN_MINUTES_IN_SEC)

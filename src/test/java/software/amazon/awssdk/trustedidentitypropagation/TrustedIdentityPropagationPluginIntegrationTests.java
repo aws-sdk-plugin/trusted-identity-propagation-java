@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.nimbusds.jose.jwk.RSAKey;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
@@ -21,8 +20,7 @@ public class TrustedIdentityPropagationPluginIntegrationTests {
     public void testInValidWebToken() throws Exception {
 
         Map<String, String> envMap = TestHelpers.getIntegrationTestEnvironment();
-        RSAKey rsaKey = TestHelpers.generateInvalidJWK();
-        String idToken = TestHelpers.generateWebToken(rsaKey, envMap);
+        String idToken = TestHelpers.generateInvalidWebToken();
         String idcApplicationArn = envMap.get("IdcApplicationArn");
         String AccessRoleArn = envMap.get("AccessRoleArn");
 
@@ -43,18 +41,18 @@ public class TrustedIdentityPropagationPluginIntegrationTests {
             StsClient.builder().region(Region.US_EAST_1).addPlugin(trustedIdentityPropagationPlugin)
                 .build();
 
-        Exception exception = assertThrows(InvalidGrantException.class, () -> stsClient.getCallerIdentity());
-        assertTrue(exception.getMessage().contains("Service returned error code InvalidGrantException"));
+        Exception exception = assertThrows(InvalidGrantException.class,
+            () -> stsClient.getCallerIdentity());
+        assertTrue(
+            exception.getMessage().contains("Service returned error code InvalidGrantException"));
 
     }
-
 
 
     @Test
     public void testValidWebToken() throws Exception {
         Map<String, String> envMap = TestHelpers.getIntegrationTestEnvironment();
-        RSAKey rsaKey = TestHelpers.getIntegrationTestPrivateKey();
-        String idToken = TestHelpers.generateWebToken(rsaKey, envMap);
+        String idToken = TestHelpers.generateWebToken(envMap);
         String idcApplicationArn = envMap.get("IdcApplicationArn");
         String AccessRoleArn = envMap.get("AccessRoleArn");
 

@@ -1,20 +1,18 @@
 package software.amazon.awssdk.trustedidentitypropagation;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.nimbusds.jose.Algorithm;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JOSEObjectType;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.jwk.KeyUse;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.math.BigInteger;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.spec.RSAPrivateKeySpec;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,7 +48,6 @@ public class TestHelpers {
                 map.put(entry.getKey(), entry.getValue().getAsString());
             }
 
-            System.out.println(map);
             return map;
 
         } catch (Exception e) {
@@ -58,52 +55,17 @@ public class TestHelpers {
         }
     }
 
-    public static RSAKey generateCustomJWK() {
-        try {
-            return new RSAKeyGenerator(2048)
-                .keyID(UUID.randomUUID().toString()) // Key ID
-                .keyUse(KeyUse.SIGNATURE) // Key usage
-                .algorithm(new Algorithm("RS256")) // Intended algorithm
-                .generate();
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate JWK", e);
-        }
+    public static String generateInvalidWebToken() throws Exception {
+        return Jwts.builder()
+            .setHeaderParam("kid", "test")
+            // Set standard claims
+            .setId(UUID.randomUUID().toString())  // jwtid
+            .setIssuer("idpIssuerUrl")
+            .compact();
     }
 
-    public static RSAKey generateInvalidJWK() {
-        try {
-            // Generate a valid JWK first
-            RSAKey validJwk = generateCustomJWK();
-
-            // Create an invalid key by modifying some parameters
-            return new RSAKey.Builder(validJwk.toPublicJWK())
-                .privateExponent(validJwk.getPrivateExponent()) // Keep private exponent
-                .keyID("invalid-key") // Change key ID
-                .build();
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate invalid JWK", e);
-        }
-    }
-
-    public static RSAKey getIntegrationTestPrivateKey() {
-
-
-        try {
-            String privateKey = System.getenv("INTEGRATION_TEST_PRIVATE_KEY");
-            if (privateKey == null || privateKey.trim().isEmpty()) {
-                throw new IllegalStateException(
-                    "INTEGRATION_TEST_PRIVATE_KEY environment variable is not set");
-            }
-            return RSAKey.parse(privateKey);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to process integration test environment", e);
-        }
-    }
-
-    public static String generateWebToken(RSAKey jwk, Map<String, String> envMap)
-        throws JOSEException {
+    public static String generateWebToken(Map<String, String> envMap)
+        throws Exception {
 
         String idcUserName = envMap.get("IdcUserName");
         String idpIssuerUrl = envMap.get("IdpIssuerUrl");
@@ -115,37 +77,67 @@ public class TestHelpers {
         // Expiration time: current time + 1 hour
         Date expiryDate = new Date(now.getTime() + 3600000); // 1 hour in milliseconds
 
-        final JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
-            .type(JOSEObjectType.JWT)
-            .keyID(jwk.getKeyID())
-            .build();
+        String privateKey = System.getenv("INTEGRATION_TEST_PRIVATE_KEY");
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jwk = mapper.readTree(privateKey);
+        String kid = jwk.get("kid").asText();
 
-        final JWTClaimsSet payload = new JWTClaimsSet.Builder()
-            .jwtID(UUID.randomUUID().toString())
-            .subject(idpSubject)
-            .issuer(idpIssuerUrl)
-            .audience(idpAudience)
-            .issueTime(now)
-            .expirationTime(expiryDate)
-            .claim("userName", idcUserName)
-            .build();
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userName", idcUserName);
 
-        final SignedJWT signedJWT = new SignedJWT(header, payload);
-        final JWSSigner jwsSigner = getJWSSigner(jwk);
-        signedJWT.sign(jwsSigner);
-
-        return signedJWT.serialize();
+        // Build the JWT
+        String token = Jwts.builder()
+            // Set custom claims
+            .setClaims(claims)
+            // Set header parameters
+            .setHeaderParam("kid", kid)
+            // Set standard claims
+            .setId(UUID.randomUUID().toString())  // jwtid
+            .setIssuer(idpIssuerUrl)
+            .setAudience(idpAudience)
+            .setSubject(idpSubject)
+            .setIssuedAt(now)
+            .setExpiration(expiryDate)
+            // Sign the token
+            .signWith(convertJwkToKey(privateKey), SignatureAlgorithm.RS256)
+            .compact();
+        return token;
 
     }
 
-    private static JWSSigner getJWSSigner(RSAKey rsaKey) {
-        try {
-            return new RSASSASigner(rsaKey);
-        } catch (JOSEException e) {
-            throw new AssertionError(
-                String.format("Failed to create JWSSigner from key %s", rsaKey.getKeyID()), e);
+
+    public static Key convertJwkToKey(String jwkJson) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jwk = mapper.readTree(jwkJson);
+
+        return convertRsaJwkToKey(jwk);
+    }
+
+    private static Key convertRsaJwkToKey(JsonNode jwk) throws Exception {
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+        // Check if it's a private or public key
+        if (jwk.has("d")) {
+            // Private key
+            BigInteger modulus = new BigInteger(1,
+                Base64.getUrlDecoder().decode(jwk.get("n").asText()));
+            BigInteger privateExponent = new BigInteger(1,
+                Base64.getUrlDecoder().decode(jwk.get("d").asText()));
+            BigInteger publicExponent = new BigInteger(1,
+                Base64.getUrlDecoder().decode(jwk.get("e").asText()));
+
+            RSAPrivateKeySpec keySpec = new RSAPrivateKeySpec(modulus, privateExponent);
+            return keyFactory.generatePrivate(keySpec);
+        } else {
+            // Public key
+            BigInteger modulus = new BigInteger(1,
+                Base64.getUrlDecoder().decode(jwk.get("n").asText()));
+            BigInteger publicExponent = new BigInteger(1,
+                Base64.getUrlDecoder().decode(jwk.get("e").asText()));
+
+            RSAPublicKeySpec keySpec = new RSAPublicKeySpec(modulus, publicExponent);
+            return keyFactory.generatePublic(keySpec);
         }
     }
-
 
 }
