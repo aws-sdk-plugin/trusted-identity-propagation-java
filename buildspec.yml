@@ -1,0 +1,46 @@
+env:
+  secrets-manager:
+    MAVEN_USERNAME: "PackageRegistryAccessToken:username"
+    MAVEN_PASSWORD: "PackageRegistryAccessToken:password"
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+    commands:
+      - mkdir -p ~/.m2
+      # Create settings.xml with credentials from Secrets Manager
+      - |
+        cat << EOF > ~/.m2/settings.xml
+        <settings>
+          <servers>
+            <server>
+              <id>ossrh</id>
+              <username>${MAVEN_USERNAME}</username>
+              <password>${MAVEN_PASSWORD}</password>
+            </server>
+          </servers>
+        EOF
+
+  pre_build:
+    commands:
+      - echo "Starting build phase"
+      - mvn clean
+
+  build:
+    commands:
+      - mvn publish
+
+  post_build:
+    commands:
+      - echo "deployment completed"
+      - rm -f ~/.m2/settings.xml
+
+artifacts:
+  files:
+    - target/**/*
+  discard-paths: no
+
+cache:
+  paths:
+    - '/root/.m2/**/*'
