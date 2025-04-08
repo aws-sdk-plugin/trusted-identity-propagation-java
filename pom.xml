@@ -36,7 +36,7 @@
     <junit-jupiter.version>5.11.3</junit-jupiter.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mockito.version>5.17.0</mockito.version>
-    <assertj-core.version>3.26.3</assertj-core.version>
+    <assertj-core.version>3.27.3</assertj-core.version>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
     <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
