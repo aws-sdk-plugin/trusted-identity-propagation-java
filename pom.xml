@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>software.amazon.awsidentity.trustedIdentityPropagation</groupId>
@@ -9,27 +9,12 @@
   <version>1.0-SNAPSHOT</version>
 
   <properties>
-    <!-- The AWS service ID that this plugin is primarily associated with. This should match the service module
-    name from the AWS SDK for Java 2.x, if possible. Once the plugin is released, this cannot change. -->
     <service.id>awsidentity</service.id>
-
-    <!-- The AWS service name that this plugin is primarily associated with. This is a human-friendly name that
-    can change after the plugin is released.-->
     <service.name>AWS Identity</service.name>
-
-    <!-- An ID for this plugin. Plugins are primarily named after the feature they're supporting. Once this is
-    released, this cannot change. -->
     <plugin.id>trustedIdentityPropagation</plugin.id>
-
-    <!-- The name of  this plugin. This is a human-friendly name that can change after the plugin is released. -->
     <plugin.name>Trusted Identity Propagation</plugin.name>
-
-
-    <!-- The AWS SDK for Java targets JDK 8+, so SDK plugins should as well. -->
     <maven.compiler.source>8</maven.compiler.source>
     <maven.compiler.target>8</maven.compiler.target>
-
-    <!-- Ensure you keep up to date with the latest library versions. -->
     <aws-sdk-java.version>2.31.17</aws-sdk-java.version>
     <log4j.version>2.24.3</log4j.version>
     <slf4j.version>2.0.17</slf4j.version>
@@ -49,12 +34,6 @@
   </properties>
 
   <dependencies>
-    <!-- Compile Dependencies -->
-    <!-- For public AWS plugins, you must limit which compile-time third-party dependencies you take to a
-    pre-approved list provided by the AWS SDK team. See the AWS SDK plugin best-practices page for more
-    information. You may depend on any AWS SDK core or service package, but not: (1) an "umbrella" package that
-    depends on all SDK packages (e.g. the bundle is forbidden.), (2) 'third-party' SDK packages that shade
-    dependencies. -->
 
     <!-- Required dependencies used by all plugins. -->
     <dependency>
@@ -107,8 +86,7 @@
 
 
     <!-- Test Dependencies -->
-    <!-- For test dependencies, you must limit which third-party dependencies you use to those with blessed licenses
-    pre-approved by the Open Source team. -->
+    <!-- we use jsonwebtoken, gson and jackson libraries to generate token for integration testing -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-impl</artifactId>
