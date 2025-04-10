@@ -38,7 +38,7 @@ Initialize the plugin and provide it as an extension to the SDK that you want to
 ``` java 
 TrustedIdentityPropagationPlugin trustedIdentityPropagationPlugin = TrustedIdentityPropagationPlugin.builder()
             .stsClient(client)
-            .idTokenSupplier(() -> idToken)
+            .webTokenProvider(() -> idToken)
             .applicationArn(idcApplicationArn)
             .accessRoleArn(AccessRoleArn)
             .ssoOidcClient(SsoOidcClient.builder().region(Region.US_EAST_1).build())
