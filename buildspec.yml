@@ -20,6 +20,7 @@ phases:
               <password>${MAVEN_PASSWORD}</password>
             </server>
           </servers>
+        </settings>
         EOF
 
   pre_build:
