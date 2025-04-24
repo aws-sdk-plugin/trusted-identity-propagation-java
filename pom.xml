@@ -6,7 +6,7 @@
 
   <groupId>software.amazon.awsidentity.trustedIdentityPropagation</groupId>
   <artifactId>aws-sdk-java-trustedIdentityPropagation-java-plugin</artifactId>
-  <version>1.0</version>
+  <version>1.0.0</version>
 
   <properties>
     <service.id>awsidentity</service.id>
