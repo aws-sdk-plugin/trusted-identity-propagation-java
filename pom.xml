@@ -18,7 +18,7 @@
     <aws-sdk-java.version>2.31.17</aws-sdk-java.version>
     <log4j.version>2.24.3</log4j.version>
     <slf4j.version>2.0.17</slf4j.version>
-    <junit-jupiter.version>5.11.3</junit-jupiter.version>
+    <junit-jupiter.version>5.12.2</junit-jupiter.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mockito.version>5.17.0</mockito.version>
     <assertj-core.version>3.27.3</assertj-core.version>
