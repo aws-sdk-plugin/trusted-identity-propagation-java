@@ -50,6 +50,8 @@ StsClient stsClient =
 
 ```
 
+Please refer to the [TIP Plugin documentation](https://docs.aws.amazon.com/sdkref/latest/guide/access-tip.html) for input parameters details.
+
 ## Install from source
 
 The plugin has been published to Maven and can be installed as described above. If you want to play with the latest version, you can build from source as follows.

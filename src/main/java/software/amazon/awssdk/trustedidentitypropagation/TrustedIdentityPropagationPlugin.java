@@ -90,6 +90,8 @@ public class TrustedIdentityPropagationPlugin implements SdkPlugin,
      */
     private final String applicationRoleArn;
 
+    private IdentityProvider webIdentityCredentialsProvider;
+
     private TrustedIdentityPropagationPlugin(Builder builder) {
 
         Validate.notNull(builder.applicationArn, "Application Arn must be provided.");
@@ -103,6 +105,14 @@ public class TrustedIdentityPropagationPlugin implements SdkPlugin,
         this.webTokenProvider = builder.webTokenProvider;
         this.applicationRoleArn = builder.applicationRoleArn;
 
+        if (builder.ssoOidcClient == null || builder.stsClient == null) {
+            Validate.notNull(builder.applicationRoleArn,
+                    "Either both of ssoOidcClient and stsClient OR the application role must be provided.");
+            Validate.isFalse(builder.accessRoleArn.equals(builder.applicationRoleArn),
+                    "Access Role and Application Role can not be same as it leads to self role assumption.");
+            retrieveCredentialsWithWebIdentityProvider();
+        }
+
         this.ssoOidcClient = Validate.getOrDefault(builder.ssoOidcClient,
             getSsoOidcClientSupplier());
 
@@ -111,12 +121,7 @@ public class TrustedIdentityPropagationPlugin implements SdkPlugin,
     }
 
     private Supplier<StsClient> getStsClientSupplier() {
-        return () -> {
-            StsClient client = StsClient.builder()
-                .credentialsProvider(AnonymousCredentialsProvider.create()).build();
-            resourcesToClose.add(client);
-            return client;
-        };
+        return () -> getStsClient();
     }
 
     private Supplier<SsoOidcClient> getSsoOidcClientSupplier() {
@@ -124,25 +129,36 @@ public class TrustedIdentityPropagationPlugin implements SdkPlugin,
     }
 
     private SsoOidcClient getSsoOidcClient() {
+        SsoOidcClient client = SsoOidcClient.builder()
+            .credentialsProvider(webIdentityCredentialsProvider).build();
+
+        resourcesToClose.add(client);
+        return client;
+    }
+
+    private StsClient getStsClient() {
+        StsClient client = StsClient.builder()
+            .credentialsProvider(webIdentityCredentialsProvider).build();
+
+        resourcesToClose.add(client);
+        return client;
+    }
+
+    private void retrieveCredentialsWithWebIdentityProvider() {
         StsClient noAuthStsClient = StsClient.builder()
             .credentialsProvider(AnonymousCredentialsProvider.create()).build();
-        IdentityProvider credentialsProvider =
+        webIdentityCredentialsProvider =
             StsAssumeRoleWithWebIdentityCredentialsProvider.builder()
                 .stsClient(noAuthStsClient)
                 .refreshRequest(
                     AssumeRoleWithWebIdentityRequest.builder()
                         .webIdentityToken(webTokenProvider.get())
-                        .roleArn(
-                            applicationRoleArn != null ? applicationRoleArn : accessRoleArn)
+                        .roleArn(applicationRoleArn)
                         .roleSessionName(getBootstrapSessionName(applicationArn)).build())
                 .build();
-        SsoOidcClient client = SsoOidcClient.builder()
-            .credentialsProvider(credentialsProvider).build();
-        resourcesToClose.add(noAuthStsClient);
-        resourcesToClose.add(client);
-        return client;
-    }
 
+        resourcesToClose.add(noAuthStsClient);
+    }
 
     public static TrustedIdentityPropagationPlugin create() {
         return new TrustedIdentityPropagationPlugin(builder());
@@ -215,11 +231,6 @@ public class TrustedIdentityPropagationPlugin implements SdkPlugin,
 
         public Builder applicationRoleArn(String applicationRoleArn) {
             this.applicationRoleArn = applicationRoleArn;
-            return this;
-        }
-
-        public Builder idTokenSupplier(Supplier<String> idTokenSupplier) {
-            this.webTokenProvider = idTokenSupplier;
             return this;
         }
 

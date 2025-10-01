@@ -31,7 +31,7 @@ public class TrustedIdentityPropagationPluginIntegrationTests {
 
         TrustedIdentityPropagationPlugin trustedIdentityPropagationPlugin = TrustedIdentityPropagationPlugin.builder()
             .stsClient(client)
-            .idTokenSupplier(() -> idToken)
+            .webTokenProvider(() -> idToken)
             .applicationArn(idcApplicationArn)
             .accessRoleArn(AccessRoleArn)
             .ssoOidcClient(SsoOidcClient.builder().region(Region.US_EAST_1).build())
@@ -56,13 +56,9 @@ public class TrustedIdentityPropagationPluginIntegrationTests {
         String idcApplicationArn = envMap.get("IdcApplicationArn");
         String AccessRoleArn = envMap.get("AccessRoleArn");
 
-        StsClient client = StsClient.builder()
-            .region(Region.US_EAST_1)
-            .credentialsProvider(AnonymousCredentialsProvider.create()).build();
-
         TrustedIdentityPropagationPlugin trustedIdentityPropagationPlugin = TrustedIdentityPropagationPlugin.builder()
-            .stsClient(client)
-            .idTokenSupplier(() -> idToken)
+            .stsClient(StsClient.builder().region(Region.US_EAST_1).build())
+            .webTokenProvider(() -> idToken)
             .applicationArn(idcApplicationArn)
             .accessRoleArn(AccessRoleArn)
             .ssoOidcClient(SsoOidcClient.builder().region(Region.US_EAST_1).build())
