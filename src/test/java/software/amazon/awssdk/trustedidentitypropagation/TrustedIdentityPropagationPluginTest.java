@@ -3,6 +3,7 @@ package software.amazon.awssdk.trustedidentitypropagation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
@@ -28,11 +29,12 @@ public class TrustedIdentityPropagationPluginTest {
     private String idcIdToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ"
         + "SI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJzdHM6aWRlbnRpdHlfY29udGV4dCI6ImlkY29udGV4dCJ9.5vKibdvG2tmtmRtmgUaXcbSIkLwP67h6oIyVMBwPt1Q";
     private String roleArn = "arn:aws:iam::123456789101:role/example";
+    private String applicationRoleArn = "arn:aws:iam::123456789101:role/applicationRoleExample";
     private String ssoClientId = "arn:aws:sso::123456789101:application/ssoins-1234567891234567/apl-1234567891234567";
     private StsClient stsClient = Mockito.mock(StsClient.class);
     private SsoOidcClient oidcClient = Mockito.mock(SsoOidcClient.class);
     private TrustedIdentityPropagationPlugin trustedIdentityPropagationPlugin = TrustedIdentityPropagationPlugin.builder()
-        .idTokenSupplier(() -> idToken)
+        .webTokenProvider(() -> idToken)
         .applicationArn(ssoClientId)
         .accessRoleArn(roleArn)
         .stsClient(stsClient)
@@ -83,13 +85,54 @@ public class TrustedIdentityPropagationPluginTest {
             .build()).isInstanceOfAny(RuntimeException.class);
 
         assertThatThrownBy(() -> TrustedIdentityPropagationPlugin.builder()
-            .idTokenSupplier(() -> idToken)
+            .webTokenProvider(() -> idToken)
             .accessRoleArn(roleArn)
             .build()).isInstanceOfAny(RuntimeException.class);
 
         assertThatThrownBy(() -> TrustedIdentityPropagationPlugin.builder()
-            .idTokenSupplier(() -> idToken)
+            .webTokenProvider(() -> idToken)
             .applicationArn(ssoClientId)
             .build()).isInstanceOfAny(RuntimeException.class);
+
+        assertThatThrownBy(() -> TrustedIdentityPropagationPlugin.builder()
+            .webTokenProvider(() -> idToken)
+            .applicationArn(ssoClientId)
+            .accessRoleArn(roleArn)
+            .build()).isInstanceOfAny(RuntimeException.class);
+
+        assertThatThrownBy(() -> TrustedIdentityPropagationPlugin.builder()
+                .webTokenProvider(() -> idToken)
+                .applicationArn(ssoClientId)
+                .accessRoleArn(roleArn)
+                .ssoOidcClient(oidcClient)
+                .build()).isInstanceOfAny(RuntimeException.class);
+
+        assertThatThrownBy(() -> TrustedIdentityPropagationPlugin.builder()
+                .webTokenProvider(() -> idToken)
+                .applicationArn(ssoClientId)
+                .accessRoleArn(roleArn)
+                .stsClient(stsClient)
+                .build()).isInstanceOfAny(RuntimeException.class);
+    }
+
+    @Test
+    public void tipPlugin_doesNotThrowWhenOidcAndStsClientsAreProvided() {
+        assertDoesNotThrow(() -> TrustedIdentityPropagationPlugin.builder()
+            .webTokenProvider(() -> idToken)
+            .applicationArn(ssoClientId)
+            .accessRoleArn(roleArn)
+            .stsClient(stsClient)
+            .ssoOidcClient(oidcClient)
+            .build());
+    }
+
+    @Test
+    public void tipPlugin_doesNotThrowWhenApplicationRoleArnIsProvided() {
+        assertDoesNotThrow(() -> TrustedIdentityPropagationPlugin.builder()
+            .webTokenProvider(() -> idToken)
+            .applicationArn(ssoClientId)
+            .accessRoleArn(roleArn)
+            .applicationRoleArn(applicationRoleArn)
+            .build());
     }
 }

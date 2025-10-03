@@ -23,4 +23,6 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Build with Maven
+        env:
+          AWS_REGION: "us-east-1"
         run: mvn clean package --file pom.xml

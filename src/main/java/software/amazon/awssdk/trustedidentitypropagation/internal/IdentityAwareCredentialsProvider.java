@@ -94,9 +94,7 @@ public class IdentityAwareCredentialsProvider implements AwsCredentialsProvider 
             .roleArn(accessRoleArn)
             .durationSeconds(FIFTEEN_MINUTES_IN_SEC)
             .roleSessionName(getIdentityEnhancedSessionName(applicationArn))
-            .overrideConfiguration(
-                c -> c.credentialsProvider(ssoOidcClient.serviceClientConfiguration()
-                    .credentialsProvider()).addApiName(getTipApiName()))
+            .overrideConfiguration(c -> c.addApiName(getTipApiName()))
             .providedContexts(ProvidedContext.builder()
                 .providerArn(CONTEXT_PROVIDER_IDENTITY_CENTER)
                 .contextAssertion(contextAssertion)
